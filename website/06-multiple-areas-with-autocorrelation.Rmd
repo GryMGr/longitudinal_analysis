@@ -1,0 +1,240 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+# Panel data: multiple areas with autocorrelation
+
+## Aim
+
+We are given a dataset containing daily counts of diseases from multiple geographical areas. We want to identify:
+
+- Does seasonality exist?
+- If seasonality exists, when are the high/low seasons?
+- Is there a general yearly trend (i.e. increasing or decreasing from year to year?)
+
+\newpage
+
+## Creating the data
+
+The data for this chapter is available at: http://rwhite.no/longitudinal_analysis/data/chapter_7.csv
+
+```{r}
+library(data.table)
+library(ggplot2)
+set.seed(4)
+
+AMPLITUDE <- 1.5
+SEASONAL_HORIZONTAL_SHIFT <- 20
+
+fylkeIntercepts <- data.table(fylke=1:20,fylkeIntercepts=rnorm(20))
+
+d <- data.table(date=seq.Date(
+  from=as.Date("2010-01-01"),
+  to=as.Date("2015-12-31"),
+  by=1))
+d[,year:=as.numeric(format.Date(date,"%G"))]
+d[,week:=as.numeric(format.Date(date,"%V"))]
+d[,month:=as.numeric(format.Date(date,"%m"))]
+
+temp <- vector("list",length=20)
+for(i in 1:20){
+  temp[[i]] <- copy(d)
+  temp[[i]][,fylke:=i]
+}
+d <- rbindlist(temp)
+
+d[,yearMinus2000:=year-2000]
+d[,dayOfSeries:=1:.N]
+
+d[,dayOfYear:=as.numeric(format.Date(date,"%j"))]
+d[,seasonalEffect:=sin(2*pi*(dayOfYear-SEASONAL_HORIZONTAL_SHIFT)/365)]
+d[,mu := round(exp(0.1 + yearMinus2000*0.1 + seasonalEffect*AMPLITUDE))]
+d[,y:=rpois(.N,mu)]
+d[,y:=mu+round(as.numeric(arima.sim(model=list("ar"=c(0.5)), rand.gen = rpois, n=nrow(d), lambda=mu)))]
+
+fwrite(d,"data/chapter_7.csv")
+```
+
+\newpage
+
+## Investigation
+
+We drill down into a few years in fylke 1, and see a clear seasonal trend
+```{r warning=FALSE}
+q <- ggplot(d[fylke==1],aes(x=dayOfYear,y=y))
+q <- q + facet_wrap(~year)
+q <- q + geom_point()
+q <- q + stat_smooth(colour="red")
+q
+```
+
+\newpage
+
+The Lomb-Scargle Periodogram shows a clear seasonality with a period of 365 days
+```{}
+// STATA CODE STARTS
+insheet using "chapter_7.csv", clear
+
+sort fylke date
+by fylke: gen time=_n
+tsset fylke time, daily
+
+wntestb y if fylke==1
+
+cumsp y if fylke==1, gen(cumulative_spec_dist)
+by fylke: gen period=_N/_n
+
+browse cumulative_spec_dist period
+// STATA CODE ENDS
+```
+
+```{r}
+# R CODE
+lomb::lsp(d$y,from=100,to=500,ofac=1,type="period")
+```
+
+\newpage
+
+## Regressions
+First we create an `id` variable. This generally corresponds to geographical locations, or people. In this case, we only have one geographical location, so our `id` for all observations is `1`. This lets the computer know that all data belongs to the same group.
+
+When we have panel data with multiple areas, we use the `MASS::glmPQL` function in R and the `meglm` function in STATA. In R we identify the geographical areas with `random = ~ § | fylke` and in STATA with `|| fylke:`.
+```{}
+// STATA CODE STARTS
+gen cos365=cos(dayofyear*2*_pi/365)
+gen sin365=sin(dayofyear*2*_pi/365)
+
+meglm y yearminus2000 || fylke:, family(poisson) iter(10)
+estimates store m1
+meglm y yearminus2000 cos365 sin365 || fylke:, family(poisson) iter(10)
+estimates store m2
+
+predict resid, anscombe
+
+lrtest m1 m2
+// STATA CODE ENDS
+```
+
+```{r}
+# R CODE
+d[,cos365:=cos(dayOfYear*2*pi/365)]
+d[,sin365:=sin(dayOfYear*2*pi/365)]
+fit0 <- MASS::glmmPQL(y~yearMinus2000, random = ~ 1 | fylke,
+                family = poisson, data = d)
+fit1 <- MASS::glmmPQL(y~yearMinus2000 + sin365 + cos365, random = ~ 1 | fylke,
+                family = poisson, data = d)
+
+print(lmtest::lrtest(fit0, fit1))
+```
+
+We see that the likelihood ratio test for `sin365` and `cos365` was significant, meaning that there is significant seasonality with a 365 day periodicity in our data (which we already strongly suspected due to the periodogram).
+
+\newpage
+
+We can now run/look at the results of our main regression.
+
+```{r}
+print(summary(fit1))
+```
+
+\newpage
+
+## Residual analysis
+
+We see that there is an `AR(1)` autocorrelation in the residuals, meaning that our model is not appropriate.
+```{}
+// STATA CODE STARTS
+pac resid if fylke==1
+// STATA CODE ENDS
+```
+
+```{r}
+# R CODE
+pacf(residuals(fit1, type = "normalized")) # this is for AR
+```
+
+\newpage
+
+We see that there is some sort of `AR` autocorrelation in the residuals, meaning that our model is not appropriate.
+```{}
+// STATA CODE STARTS
+ac resid if fylke==1
+// STATA CODE ENDS
+```
+
+```{r}
+# R CODE
+acf(residuals(fit1, type = "normalized")) # this is for MA
+```
+
+\newpage
+
+## (R ONLY) Regression with AR(1) correlation in residuals
+
+We include `correlation=nlme::corAR1(form=~dayOfSeries|fylke)` or in other words `correlation=nlme::corAR1(form=~time|group)` to let the computer know what is the time variable and what is the group variable.
+
+```{r}
+fit1 <- MASS::glmmPQL(y~yearMinus2000+sin365 + cos365, random = ~ 1 | fylke,
+                family = poisson, data = d,
+                correlation=nlme::corAR1(form=~dayOfSeries|fylke))
+summary(fit1)
+```
+
+\newpage
+
+## Residual analysis
+
+We see that the vast majority of the autoregression in the residuals has been removed.
+```{r}
+pacf(residuals(fit1, type = "normalized")) # this is for AR
+```
+
+\newpage
+
+We see that the vast majority of the autoregression in the residuals has been removed.
+```{r}
+acf(residuals(fit1, type = "normalized")) # this is for MA
+```
+
+\newpage
+
+We obtain the same estimates that we did in the last chapter.
+
+```{r}
+b1 <- 1.4007640 # sin coefficient
+b2 <- -0.5234863 # cos coefficient
+amplitude <- sqrt(b1^2 + b2^2)
+p <- atan(b1/b2) * 365/2/pi
+if (p > 0) {
+    peak <- p
+    trough <- p + 365/2
+} else {
+    peak <- p + 365/2
+    trough <- p + 365
+}
+if (b1 < 0) {
+    g <- peak
+    peak <- trough
+    trough <- g
+}
+print(sprintf("amplitude is estimated as %s, peak is estimated as %s, trough is estimated as %s",round(amplitude,2),round(peak),round(trough)))
+
+print(sprintf("true values are: amplitude: %s, peak: %s, trough: %s",round(AMPLITUDE,2),round(365/4+SEASONAL_HORIZONTAL_SHIFT),round(3*365/4+SEASONAL_HORIZONTAL_SHIFT)))
+
+```
+
+\newpage
+
+## (STATA ONLY) Regression with robust standard errors
+
+In STATA it is not possible to explicitly model autocorrelation in the residuals (with the exception of linear regression). Since most of our work deals with logistic and poisson regressions, we will be focusing on modelling strategies that work with all kinds of regressions.
+
+The STATA approach to autocorrelation is to estimate more `robust` standard errors. That is, STATA makes the standard errors larger to account for the model mispecification. This is done through the `vce(robust)` option.
+
+```{}
+// STATA CODE STARTS
+meglm y yearminus2000 cos365 sin365 || fylke:, family(poisson) iter(10) vce(robust)
+// STATA CODE ENDS
+```
