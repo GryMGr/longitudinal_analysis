@@ -32,8 +32,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   
   
-
-<link rel="next" href="reference.html">
+<link rel="prev" href="not-panel-data-multiple-areas.html">
+<link rel="next" href="panel-data-multiple-areas-with-autocorrelation.html">
 <script src="libs/jquery-2.2.3/jquery.min.js"></script>
 <link href="libs/gitbook-2.6.7/css/style.css" rel="stylesheet" />
 <link href="libs/gitbook-2.6.7/css/plugin-table.css" rel="stylesheet" />
@@ -194,65 +194,207 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
           <div class="page-inner">
 
             <section class="normal" id="section-">
-<div id="header">
-<h1 class="title">Longitudinal Analysis</h1>
-<p class="author"><em>Richard White</em></p>
-<p class="date"><em>2018-11-02</em></p>
-</div>
-<div id="syllabus" class="section level1">
-<h1><span class="header-section-number">1</span> Syllabus</h1>
-<p><strong>Instructor:</strong> Richard White [<a href="mailto:richard.white@fhi.no">richard.white@fhi.no</a>]</p>
-<p><strong>Time:</strong> 09:30 - 15:00, 18th September 2017</p>
-<p><strong>Location:</strong> Main auditorium, L8, Lindern Campus, Folkehelseinstittutet, Oslo</p>
-<p><strong>Language:</strong> English</p>
-<p><strong>Format and Procedures</strong></p>
-<p>09:00 - 10:00: Lecture 1</p>
-<p>10:00 - 10:10: Break</p>
-<p>10:10 - 11:10: Lecture 2</p>
-<p>10:10 - 10:15: Break</p>
-<p>11:15 - 11:45: Examples from FHI</p>
-<p><strong>Description</strong></p>
-<p>This course will provide a basic overview of general statistical methodology that can be useful in the areas of infectious diseases, environmental medicine, and labwork. By the end of this course, students will be able to identify appropriate statistical methods for a variety of circumstances.</p>
-<p>This course will <strong>not</strong> teach students how to implement these statistical methods, as there is not sufficient time. The aim of this course is to enable the student to identify which methods are required for their study, allowing the student to identify their needs for subsequent methods courses, self-learning, or external help.</p>
-<p>You should register for this course if you are one of the following:</p>
+<div id="panel-data-multiple-areas-without-autocorrelation" class="section level1">
+<h1><span class="header-section-number">6</span> Panel data: multiple areas without autocorrelation</h1>
+<div id="aim-3" class="section level2">
+<h2><span class="header-section-number">6.1</span> Aim</h2>
+<p>We are given a dataset containing daily counts of diseases from multiple geographical areas. We want to identify:</p>
 <ul>
-<li>Have experience with applying statistical methods, but are sometimes confused or uncertain as to whether or not you have selected the correct method.</li>
-<li>Do not have experience with applying statistical methods, and would like to get an overview over which methods are applicable for your projects so that you can then undertake further studies in these areas.</li>
+<li>Does seasonality exist?</li>
+<li>If seasonality exists, when are the high/low seasons?</li>
+<li>Is there a general yearly trend (i.e. increasing or decreasing from year to year?)</li>
 </ul>
-<p><strong>Lecture 1</strong></p>
-<ol style="list-style-type: decimal">
-<li>Identifying continuous, categorical, count, and censored variables</li>
-<li>Identifying exposure and outcome variables</li>
-<li>Identifying when t-tests (paired and unpaired) should be used</li>
-<li>Identifying when non-parametric t-test equivalents should be used</li>
-<li>Identifying when ANOVA should be used</li>
-<li>Identifying when linear regression should be used</li>
-<li>Identifying the similarities between t-tests, ANOVA, and regression</li>
-<li>Identifying when logistic regression models should be used</li>
-<li>Identifying when Poisson/negative binomial and cox regression models should be used</li>
-<li>Identifying when chi-squared/fisher’s exact test should be used</li>
-</ol>
-<p><strong>Lecture 2</strong></p>
-<ol style="list-style-type: decimal">
-<li>Identifying when data does not have any dependencies (i.e. all observations are independent of each other) versus when data has complicated dependencies (i.e. longitudinal data, matched data, multiple cohorts)</li>
-<li>Identifying when mixed effects regression models should be used</li>
-<li>Identifying when conditional logistic regression models should be used</li>
-<li>(TBD) Understanding the different imputation methods used when lab data is below the limit of detection (LOD)</li>
-<li>(TBD) Understanding the best practices for data files and project folders</li>
-</ol>
-<p><strong>Prerequisites</strong></p>
-<p>To participate in this course it is recommended that you have some experience with either research or data.</p>
-<p><strong>Additional information</strong></p>
-<p>For the last 30 minutes of the course we will be going through examples of analyses performed at FHI and identifying which statistical methods are appropriate. If you would like your analysis to be featured/included in this section, please send an email to <a href="mailto:richard.white@fhi.no">richard.white@fhi.no</a> briefly describing your problem.</p>
 
+</div>
+<div id="creating-the-data-3" class="section level2">
+<h2><span class="header-section-number">6.2</span> Creating the data</h2>
+<p>The data for this chapter is available at: <a href="http://rwhite.no/longitudinal_analysis/data/chapter_6.csv" class="uri">http://rwhite.no/longitudinal_analysis/data/chapter_6.csv</a></p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(data.table)
+<span class="kw">library</span>(ggplot2)
+<span class="kw">set.seed</span>(<span class="dv">4</span>)
+
+AMPLITUDE &lt;-<span class="st"> </span><span class="fl">1.5</span>
+SEASONAL_HORIZONTAL_SHIFT &lt;-<span class="st"> </span><span class="dv">20</span>
+
+fylkeIntercepts &lt;-<span class="st"> </span><span class="kw">data.table</span>(<span class="dt">fylke=</span><span class="dv">1</span><span class="op">:</span><span class="dv">20</span>,<span class="dt">fylkeIntercepts=</span><span class="kw">rnorm</span>(<span class="dv">20</span>))
+
+d &lt;-<span class="st"> </span><span class="kw">data.table</span>(<span class="dt">date=</span><span class="kw">seq.Date</span>(
+  <span class="dt">from=</span><span class="kw">as.Date</span>(<span class="st">&quot;2010-01-01&quot;</span>),
+  <span class="dt">to=</span><span class="kw">as.Date</span>(<span class="st">&quot;2015-12-31&quot;</span>),
+  <span class="dt">by=</span><span class="dv">1</span>))
+d[,year<span class="op">:</span><span class="er">=</span><span class="kw">as.numeric</span>(<span class="kw">format.Date</span>(date,<span class="st">&quot;%G&quot;</span>))]
+d[,week<span class="op">:</span><span class="er">=</span><span class="kw">as.numeric</span>(<span class="kw">format.Date</span>(date,<span class="st">&quot;%V&quot;</span>))]
+d[,month<span class="op">:</span><span class="er">=</span><span class="kw">as.numeric</span>(<span class="kw">format.Date</span>(date,<span class="st">&quot;%m&quot;</span>))]
+
+temp &lt;-<span class="st"> </span><span class="kw">vector</span>(<span class="st">&quot;list&quot;</span>,<span class="dt">length=</span><span class="dv">20</span>)
+<span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span><span class="dv">20</span>){
+  temp[[i]] &lt;-<span class="st"> </span><span class="kw">copy</span>(d)
+  temp[[i]][,fylke<span class="op">:</span><span class="er">=</span>i]
+}
+d &lt;-<span class="st"> </span><span class="kw">rbindlist</span>(temp)
+
+d[,yearMinus2000<span class="op">:</span><span class="er">=</span>year<span class="op">-</span><span class="dv">2000</span>]
+d[,dayOfSeries<span class="op">:</span><span class="er">=</span><span class="dv">1</span><span class="op">:</span>.N]
+
+d[,dayOfYear<span class="op">:</span><span class="er">=</span><span class="kw">as.numeric</span>(<span class="kw">format.Date</span>(date,<span class="st">&quot;%j&quot;</span>))]
+d[,seasonalEffect<span class="op">:</span><span class="er">=</span><span class="kw">sin</span>(<span class="dv">2</span><span class="op">*</span>pi<span class="op">*</span>(dayOfYear<span class="op">-</span>SEASONAL_HORIZONTAL_SHIFT)<span class="op">/</span><span class="dv">365</span>)]
+d[,mu <span class="op">:</span><span class="er">=</span><span class="st"> </span><span class="kw">exp</span>(<span class="fl">0.1</span> <span class="op">+</span><span class="st"> </span>yearMinus2000<span class="op">*</span><span class="fl">0.1</span> <span class="op">+</span><span class="st"> </span>seasonalEffect<span class="op">*</span>AMPLITUDE)]
+d[,y<span class="op">:</span><span class="er">=</span><span class="kw">rpois</span>(.N,mu)]
+
+<span class="kw">fwrite</span>(d,<span class="st">&quot;data/chapter_6.csv&quot;</span>)</code></pre></div>
+
+</div>
+<div id="investigation-2" class="section level2">
+<h2><span class="header-section-number">6.3</span> Investigation</h2>
+<p>We then drill down into a few years for fylke 1, and see a clear seasonal trend</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">q &lt;-<span class="st"> </span><span class="kw">ggplot</span>(d[fylke<span class="op">==</span><span class="dv">1</span>],<span class="kw">aes</span>(<span class="dt">x=</span>dayOfYear,<span class="dt">y=</span>y))
+q &lt;-<span class="st"> </span>q <span class="op">+</span><span class="st"> </span><span class="kw">facet_wrap</span>(<span class="op">~</span>year)
+q &lt;-<span class="st"> </span>q <span class="op">+</span><span class="st"> </span><span class="kw">geom_point</span>()
+q &lt;-<span class="st"> </span>q <span class="op">+</span><span class="st"> </span><span class="kw">stat_smooth</span>(<span class="dt">colour=</span><span class="st">&quot;red&quot;</span>)
+q</code></pre></div>
+<pre><code>## `geom_smooth()` using method = &#39;loess&#39; and formula &#39;y ~ x&#39;</code></pre>
+<p><img src="website_files/figure-html/unnamed-chunk-44-1.png" width="672" /></p>
+
+<p>The Lomb-Scargle Periodogram shows a clear seasonality with a period of 365 days</p>
+<pre><code>// STATA CODE STARTS
+insheet using &quot;chapter_6.csv&quot;, clear
+
+sort fylke date
+by fylke: gen time=_n
+tsset fylke time, daily
+
+wntestb y if fylke==1
+
+cumsp y if fylke==1, gen(cumulative_spec_dist)
+by fylke: gen period=_N/_n
+
+browse cumulative_spec_dist period
+// STATA CODE ENDS</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># RCODE</span>
+lomb<span class="op">::</span><span class="kw">lsp</span>(d<span class="op">$</span>y,<span class="dt">from=</span><span class="dv">100</span>,<span class="dt">to=</span><span class="dv">500</span>,<span class="dt">ofac=</span><span class="dv">1</span>,<span class="dt">type=</span><span class="st">&quot;period&quot;</span>)</code></pre></div>
+<p><img src="website_files/figure-html/unnamed-chunk-45-1.png" width="672" /></p>
+
+</div>
+<div id="regression-1" class="section level2">
+<h2><span class="header-section-number">6.4</span> Regression</h2>
+<p>First we create an <code>id</code> variable. This generally corresponds to geographical locations, or people. In this case, we only have one geographical location, so our <code>id</code> for all observations is <code>1</code>. This lets the computer know that all data belongs to the same group.</p>
+<p>When we have panel data with multiple areas, we use the <code>MASS::glmPQL</code> function in R and the <code>meglm</code> function in STATA. In R we identify the geographical areas with <code>random = ~ 1 | fylke</code> and in STATA with <code>|| fylke:</code>.</p>
+<pre><code>// STATA CODE STARTS
+gen cos365=cos(dayofyear*2*_pi/365)
+gen sin365=sin(dayofyear*2*_pi/365)
+
+meglm y yearminus2000 || fylke:, family(poisson) iter(10)
+estimates store m1
+meglm y yearminus2000 cos365 sin365 || fylke:, family(poisson) iter(10)
+estimates store m2
+
+predict resid, anscombe
+
+lrtest m1 m2
+// STATA CODE ENDS</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># R CODE</span>
+d[,cos365<span class="op">:</span><span class="er">=</span><span class="kw">cos</span>(dayOfYear<span class="op">*</span><span class="dv">2</span><span class="op">*</span>pi<span class="op">/</span><span class="dv">365</span>)]
+d[,sin365<span class="op">:</span><span class="er">=</span><span class="kw">sin</span>(dayOfYear<span class="op">*</span><span class="dv">2</span><span class="op">*</span>pi<span class="op">/</span><span class="dv">365</span>)]
+fit0 &lt;-<span class="st"> </span>MASS<span class="op">::</span><span class="kw">glmmPQL</span>(y<span class="op">~</span>yearMinus2000, <span class="dt">random =</span> <span class="op">~</span><span class="st"> </span><span class="dv">1</span> <span class="op">|</span><span class="st"> </span>fylke,
+                <span class="dt">family =</span> poisson, <span class="dt">data =</span> d)</code></pre></div>
+<pre><code>## iteration 1</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">fit1 &lt;-<span class="st"> </span>MASS<span class="op">::</span><span class="kw">glmmPQL</span>(y<span class="op">~</span>yearMinus2000 <span class="op">+</span><span class="st"> </span>sin365 <span class="op">+</span><span class="st"> </span>cos365, <span class="dt">random =</span> <span class="op">~</span><span class="st"> </span><span class="dv">1</span> <span class="op">|</span><span class="st"> </span>fylke,
+                <span class="dt">family =</span> poisson, <span class="dt">data =</span> d)</code></pre></div>
+<pre><code>## iteration 1</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">print</span>(lmtest<span class="op">::</span><span class="kw">lrtest</span>(fit0, fit1))</code></pre></div>
+<pre><code>## Likelihood ratio test
+## 
+## Model 1: y ~ yearMinus2000
+## Model 2: y ~ yearMinus2000 + sin365 + cos365
+##   #Df LogLik Df Chisq Pr(&gt;Chisq)
+## 1   4                           
+## 2   6         2</code></pre>
+<p>We see that the likelihood ratio test for <code>sin365</code> and <code>cos365</code> was significant, meaning that there is significant seasonality with a 365 day periodicity in our data (which we already strongly suspected due to the periodogram).</p>
+
+<p>We can now run/look at the results of our main regression.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">print</span>(<span class="kw">summary</span>(fit1))</code></pre></div>
+<pre><code>## Linear mixed-effects model fit by maximum likelihood
+##  Data: d 
+##   AIC BIC logLik
+##    NA  NA     NA
+## 
+## Random effects:
+##  Formula: ~1 | fylke
+##          (Intercept)  Residual
+## StdDev: 1.583894e-05 0.9976713
+## 
+## Variance function:
+##  Structure: fixed weights
+##  Formula: ~invwt 
+## Fixed effects: y ~ yearMinus2000 + sin365 + cos365 
+##                    Value   Std.Error    DF   t-value p-value
+## (Intercept)    0.1122536 0.014488403 43797    7.7478       0
+## yearMinus2000  0.0989047 0.001109477 43797   89.1453       0
+## sin365         1.4095095 0.003695341 43797  381.4288       0
+## cos365        -0.5109375 0.003083683 43797 -165.6907       0
+##  Correlation: 
+##               (Intr) yM2000 sin365
+## yearMinus2000 -0.979              
+## sin365        -0.150  0.000       
+## cos365         0.065 -0.001 -0.151
+## 
+## Standardized Within-Group Residuals:
+##         Min          Q1         Med          Q3         Max 
+## -3.19682240 -0.82387498 -0.07501834  0.63400484  5.82452468 
+## 
+## Number of Observations: 43820
+## Number of Groups: 20</code></pre>
+
+</div>
+<div id="residual-analysis-1" class="section level2">
+<h2><span class="header-section-number">6.5</span> Residual analysis</h2>
+<p>We see that there is no evidence of autoregression in the residuals</p>
+<pre><code>// STATA CODE STARTS
+pac resid if fylke==1
+// STATA CODE ENDS</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># R CODE</span>
+<span class="kw">pacf</span>(<span class="kw">residuals</span>(fit1, <span class="dt">type =</span> <span class="st">&quot;normalized&quot;</span>)) <span class="co"># this is for AR</span></code></pre></div>
+<p><img src="website_files/figure-html/unnamed-chunk-48-1.png" width="672" /></p>
+
+<p>We see that there is no evidence of autoregression in the residuals</p>
+<pre><code>// STATA CODE STARTS
+ac resid if fylke==1
+// STATA CODE ENDS</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># R CODE</span>
+<span class="kw">acf</span>(<span class="kw">residuals</span>(fit1, <span class="dt">type =</span> <span class="st">&quot;normalized&quot;</span>)) <span class="co"># this is for MA</span></code></pre></div>
+<p><img src="website_files/figure-html/unnamed-chunk-49-1.png" width="672" /></p>
+
+<p>We also obtain the same estimates that we did in the last chapter.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">b1 &lt;-<span class="st"> </span><span class="fl">1.4007640</span> <span class="co"># sin coefficient</span>
+b2 &lt;-<span class="st"> </span><span class="op">-</span><span class="fl">0.5234863</span> <span class="co"># cos coefficient</span>
+amplitude &lt;-<span class="st"> </span><span class="kw">sqrt</span>(b1<span class="op">^</span><span class="dv">2</span> <span class="op">+</span><span class="st"> </span>b2<span class="op">^</span><span class="dv">2</span>)
+p &lt;-<span class="st"> </span><span class="kw">atan</span>(b1<span class="op">/</span>b2) <span class="op">*</span><span class="st"> </span><span class="dv">365</span><span class="op">/</span><span class="dv">2</span><span class="op">/</span>pi
+<span class="cf">if</span> (p <span class="op">&gt;</span><span class="st"> </span><span class="dv">0</span>) {
+    peak &lt;-<span class="st"> </span>p
+    trough &lt;-<span class="st"> </span>p <span class="op">+</span><span class="st"> </span><span class="dv">365</span><span class="op">/</span><span class="dv">2</span>
+} <span class="cf">else</span> {
+    peak &lt;-<span class="st"> </span>p <span class="op">+</span><span class="st"> </span><span class="dv">365</span><span class="op">/</span><span class="dv">2</span>
+    trough &lt;-<span class="st"> </span>p <span class="op">+</span><span class="st"> </span><span class="dv">365</span>
+}
+<span class="cf">if</span> (b1 <span class="op">&lt;</span><span class="st"> </span><span class="dv">0</span>) {
+    g &lt;-<span class="st"> </span>peak
+    peak &lt;-<span class="st"> </span>trough
+    trough &lt;-<span class="st"> </span>g
+}
+<span class="kw">print</span>(<span class="kw">sprintf</span>(<span class="st">&quot;amplitude is estimated as %s, peak is estimated as %s, trough is estimated as %s&quot;</span>,<span class="kw">round</span>(amplitude,<span class="dv">2</span>),<span class="kw">round</span>(peak),<span class="kw">round</span>(trough)))</code></pre></div>
+<pre><code>## [1] &quot;amplitude is estimated as 1.5, peak is estimated as 112, trough is estimated as 295&quot;</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">print</span>(<span class="kw">sprintf</span>(<span class="st">&quot;true values are: amplitude: %s, peak: %s, trough: %s&quot;</span>,<span class="kw">round</span>(AMPLITUDE,<span class="dv">2</span>),<span class="kw">round</span>(<span class="dv">365</span><span class="op">/</span><span class="dv">4</span><span class="op">+</span>SEASONAL_HORIZONTAL_SHIFT),<span class="kw">round</span>(<span class="dv">3</span><span class="op">*</span><span class="dv">365</span><span class="op">/</span><span class="dv">4</span><span class="op">+</span>SEASONAL_HORIZONTAL_SHIFT)))</code></pre></div>
+<pre><code>## [1] &quot;true values are: amplitude: 1.5, peak: 111, trough: 294&quot;</code></pre>
+
+</div>
 </div>
             </section>
 
           </div>
         </div>
       </div>
-
-<a href="reference.html" class="navigation navigation-next navigation-unique" aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+<a href="not-panel-data-multiple-areas.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
+<a href="panel-data-multiple-areas-with-autocorrelation.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
     </div>
   </div>
 <script src="libs/gitbook-2.6.7/js/app.min.js"></script>

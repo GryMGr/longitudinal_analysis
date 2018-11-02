@@ -32,8 +32,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   
   
-
-<link rel="next" href="reference.html">
+<link rel="prev" href="panel-data-one-area-with-autocorrelation.html">
+<link rel="next" href="panel-data-multiple-areas-without-autocorrelation.html">
 <script src="libs/jquery-2.2.3/jquery.min.js"></script>
 <link href="libs/gitbook-2.6.7/css/style.css" rel="stylesheet" />
 <link href="libs/gitbook-2.6.7/css/plugin-table.css" rel="stylesheet" />
@@ -194,65 +194,120 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
           <div class="page-inner">
 
             <section class="normal" id="section-">
-<div id="header">
-<h1 class="title">Longitudinal Analysis</h1>
-<p class="author"><em>Richard White</em></p>
-<p class="date"><em>2018-11-02</em></p>
-</div>
-<div id="syllabus" class="section level1">
-<h1><span class="header-section-number">1</span> Syllabus</h1>
-<p><strong>Instructor:</strong> Richard White [<a href="mailto:richard.white@fhi.no">richard.white@fhi.no</a>]</p>
-<p><strong>Time:</strong> 09:30 - 15:00, 18th September 2017</p>
-<p><strong>Location:</strong> Main auditorium, L8, Lindern Campus, Folkehelseinstittutet, Oslo</p>
-<p><strong>Language:</strong> English</p>
-<p><strong>Format and Procedures</strong></p>
-<p>09:00 - 10:00: Lecture 1</p>
-<p>10:00 - 10:10: Break</p>
-<p>10:10 - 11:10: Lecture 2</p>
-<p>10:10 - 10:15: Break</p>
-<p>11:15 - 11:45: Examples from FHI</p>
-<p><strong>Description</strong></p>
-<p>This course will provide a basic overview of general statistical methodology that can be useful in the areas of infectious diseases, environmental medicine, and labwork. By the end of this course, students will be able to identify appropriate statistical methods for a variety of circumstances.</p>
-<p>This course will <strong>not</strong> teach students how to implement these statistical methods, as there is not sufficient time. The aim of this course is to enable the student to identify which methods are required for their study, allowing the student to identify their needs for subsequent methods courses, self-learning, or external help.</p>
-<p>You should register for this course if you are one of the following:</p>
+<div id="not-panel-data-multiple-areas" class="section level1">
+<h1><span class="header-section-number">5</span> Not panel data: Multiple areas</h1>
+<div id="aim-2" class="section level2">
+<h2><span class="header-section-number">5.1</span> Aim</h2>
+<p>We are given a dataset containing counts of diseases from multiple geographical areas. We want to identify:</p>
 <ul>
-<li>Have experience with applying statistical methods, but are sometimes confused or uncertain as to whether or not you have selected the correct method.</li>
-<li>Do not have experience with applying statistical methods, and would like to get an overview over which methods are applicable for your projects so that you can then undertake further studies in these areas.</li>
+<li>Is there a general yearly trend (i.e. increasing or decreasing from year to year?)</li>
+<li>Is variable <code>x</code> associated with the outcome?</li>
 </ul>
-<p><strong>Lecture 1</strong></p>
-<ol style="list-style-type: decimal">
-<li>Identifying continuous, categorical, count, and censored variables</li>
-<li>Identifying exposure and outcome variables</li>
-<li>Identifying when t-tests (paired and unpaired) should be used</li>
-<li>Identifying when non-parametric t-test equivalents should be used</li>
-<li>Identifying when ANOVA should be used</li>
-<li>Identifying when linear regression should be used</li>
-<li>Identifying the similarities between t-tests, ANOVA, and regression</li>
-<li>Identifying when logistic regression models should be used</li>
-<li>Identifying when Poisson/negative binomial and cox regression models should be used</li>
-<li>Identifying when chi-squared/fisher’s exact test should be used</li>
-</ol>
-<p><strong>Lecture 2</strong></p>
-<ol style="list-style-type: decimal">
-<li>Identifying when data does not have any dependencies (i.e. all observations are independent of each other) versus when data has complicated dependencies (i.e. longitudinal data, matched data, multiple cohorts)</li>
-<li>Identifying when mixed effects regression models should be used</li>
-<li>Identifying when conditional logistic regression models should be used</li>
-<li>(TBD) Understanding the different imputation methods used when lab data is below the limit of detection (LOD)</li>
-<li>(TBD) Understanding the best practices for data files and project folders</li>
-</ol>
-<p><strong>Prerequisites</strong></p>
-<p>To participate in this course it is recommended that you have some experience with either research or data.</p>
-<p><strong>Additional information</strong></p>
-<p>For the last 30 minutes of the course we will be going through examples of analyses performed at FHI and identifying which statistical methods are appropriate. If you would like your analysis to be featured/included in this section, please send an email to <a href="mailto:richard.white@fhi.no">richard.white@fhi.no</a> briefly describing your problem.</p>
 
+</div>
+<div id="creating-the-data-2" class="section level2">
+<h2><span class="header-section-number">5.2</span> Creating the data</h2>
+<p>The data for this chapter is available at: <a href="http://rwhite.no/longitudinal_analysis/data/chapter_5.csv" class="uri">http://rwhite.no/longitudinal_analysis/data/chapter_5.csv</a></p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(data.table)
+<span class="kw">library</span>(lme4)</code></pre></div>
+<pre><code>## Loading required package: Matrix</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">set.seed</span>(<span class="dv">4</span>)
+
+fylkeIntercepts &lt;-<span class="st"> </span><span class="kw">data.table</span>(<span class="dt">fylke=</span><span class="dv">1</span><span class="op">:</span><span class="dv">20</span>,<span class="dt">fylkeIntercepts=</span><span class="kw">rnorm</span>(<span class="dv">20</span>))
+
+d &lt;-<span class="st"> </span><span class="kw">data.table</span>(<span class="dt">fylke=</span><span class="kw">rep</span>(<span class="dv">1</span><span class="op">:</span><span class="dv">20</span>,<span class="dt">each=</span><span class="dv">100</span>))
+d &lt;-<span class="st"> </span><span class="kw">merge</span>(d,fylkeIntercepts,<span class="dt">by=</span><span class="st">&quot;fylke&quot;</span>)
+d[,mainIntercept<span class="op">:</span><span class="er">=</span><span class="dv">3</span>]
+d[,x<span class="op">:</span><span class="er">=</span><span class="kw">runif</span>(.N)]
+d[,year<span class="op">:</span><span class="er">=</span><span class="kw">sample</span>(<span class="kw">c</span>(<span class="dv">1950</span><span class="op">:</span><span class="dv">2018</span>),.N,<span class="dt">replace=</span>T)]
+d[,mu <span class="op">:</span><span class="er">=</span><span class="st"> </span><span class="kw">exp</span>(mainIntercept <span class="op">+</span><span class="st"> </span>fylkeIntercepts <span class="op">+</span><span class="st"> </span><span class="dv">3</span><span class="op">*</span>x)]
+d[,y<span class="op">:</span><span class="er">=</span><span class="kw">rpois</span>(.N,mu)]
+
+<span class="kw">fwrite</span>(d,<span class="st">&quot;data/chapter_5.csv&quot;</span>)</code></pre></div>
+
+</div>
+<div id="investigating-the-data" class="section level2">
+<h2><span class="header-section-number">5.3</span> Investigating the data</h2>
+<p>We can see from the data that we have 20 geographical areas (<code>fylke</code>) with 100 observations for each fylke, but the sampling did not happen consistently (some years have multiple measurements, other years have no measurements).</p>
+<p>This means we have:</p>
+<ul>
+<li>multiple geographical areas</li>
+<li>multiple observations in each geographical area</li>
+<li>not panel data</li>
+</ul>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">print</span>(d)</code></pre></div>
+<pre><code>##       fylke fylkeIntercepts mainIntercept          x year        mu   y
+##    1:     1       0.2167549             3 0.93831909 1966 416.42739 392
+##    2:     1       0.2167549             3 0.24217109 1981  51.58692  51
+##    3:     1       0.2167549             3 0.56559453 1972 136.12022 135
+##    4:     1       0.2167549             3 0.18089910 1950  42.92490  39
+##    5:     1       0.2167549             3 0.90449929 1951 376.24959 367
+##   ---                                                                  
+## 1996:    20      -0.2834446             3 0.89237059 1995 220.00872 209
+## 1997:    20      -0.2834446             3 0.80522348 2006 169.39375 157
+## 1998:    20      -0.2834446             3 0.59989167 1955  91.49007  96
+## 1999:    20      -0.2834446             3 0.04148228 1996  17.13293  18
+## 2000:    20      -0.2834446             3 0.77673920 2002 155.51980 152</code></pre>
+
+</div>
+<div id="regression" class="section level2">
+<h2><span class="header-section-number">5.4</span> Regression</h2>
+<p>For this scenario, we use the <code>lme4::glmer</code> function in R. We need to introduce a <code>(1|fylke)</code> term to identify the geographical areas (i.e. clusters). In STATA we use the <code>meglm</code> function and introduce a <code>|| fylke:</code> term to identify the geographical areas (i.e. clusters).</p>
+<pre><code>// STATA CODE STARTS
+insheet using &quot;chapter_5.csv&quot;, clear
+
+gen yearMinus2000 = year-2000
+meglm y x yearMinus2000 || fylke:, family(poisson)
+// STATA CODE ENDS</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># R CODE</span>
+d[,yearMinus2000<span class="op">:</span><span class="er">=</span>year<span class="op">-</span><span class="dv">2000</span>]
+<span class="kw">summary</span>(fit &lt;-<span class="st"> </span>lme4<span class="op">::</span><span class="kw">glmer</span>(y<span class="op">~</span>x <span class="op">+</span><span class="st"> </span>yearMinus2000 <span class="op">+</span><span class="st"> </span>(<span class="dv">1</span><span class="op">|</span>fylke),<span class="dt">data=</span>d,<span class="dt">family=</span><span class="kw">poisson</span>()))</code></pre></div>
+<pre><code>## Generalized linear mixed model fit by maximum likelihood (Laplace
+##   Approximation) [glmerMod]
+##  Family: poisson  ( log )
+## Formula: y ~ x + yearMinus2000 + (1 | fylke)
+##    Data: d
+## 
+##      AIC      BIC   logLik deviance df.resid 
+##  15415.5  15437.9  -7703.8  15407.5     1996 
+## 
+## Scaled residuals: 
+##     Min      1Q  Median      3Q     Max 
+## -3.0448 -0.6432 -0.0067  0.6452  4.2338 
+## 
+## Random effects:
+##  Groups Name        Variance Std.Dev.
+##  fylke  (Intercept) 0.6114   0.7819  
+## Number of obs: 2000, groups:  fylke, 20
+## 
+## Fixed effects:
+##                 Estimate Std. Error z value Pr(&gt;|z|)    
+## (Intercept)    3.375e+00  1.749e-01  19.295   &lt;2e-16 ***
+## x              3.002e+00  5.994e-03 500.874   &lt;2e-16 ***
+## yearMinus2000 -9.943e-07  7.192e-05  -0.014    0.989    
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## Correlation of Fixed Effects:
+##             (Intr) x     
+## x           -0.025       
+## yearMns2000  0.007 -0.030
+## convergence code: 0
+## Model is nearly unidentifiable: very large eigenvalue
+##  - Rescale variables?
+## Model is nearly unidentifiable: large eigenvalue ratio
+##  - Rescale variables?</code></pre>
+<p>You can see that the format of the results is the same as an ordinary regression.</p>
+
+</div>
 </div>
             </section>
 
           </div>
         </div>
       </div>
-
-<a href="reference.html" class="navigation navigation-next navigation-unique" aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+<a href="panel-data-one-area-with-autocorrelation.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
+<a href="panel-data-multiple-areas-without-autocorrelation.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
     </div>
   </div>
 <script src="libs/gitbook-2.6.7/js/app.min.js"></script>
